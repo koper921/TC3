@@ -1,0 +1,256 @@
+from nltk.corpus import wordnet
+
+def get_wordnet_pos( treebank_tag):  # tag POS TAG to tag Wordnet  pour appliquer le lemmatizer
+    if treebank_tag.startswith('J'):
+        return wordnet.ADJ
+    elif treebank_tag.startswith('V'):
+        return wordnet.VERB
+    elif treebank_tag.startswith('N'):
+        return wordnet.NOUN
+    elif treebank_tag.startswith('R'):
+        return wordnet.ADV
+    else:
+        return ''
+
+def penn_to_wn(tag):
+    return get_wordnet_pos(tag)
+
+
+from nltk.corpus import stopwords
+data = clean_text_list[0]
+stopWords = set(stopwords.words('english'))
+words = nltk.word_tokenize(data)
+wordsFiltered = []
+ 
+for w in words:
+    if w not in stopWords:
+        wordsFiltered.append(w)
+        
+        
+#TODO RAJOUTER TAG AVEC MOT \ STOP WORDS 
+#print(wordsFiltered)
+words_sans_stop = [nltk.word_tokenize(w) for w in wordsFiltered ]
+
+words_sans_stop_tag = [nltk.pos_tag(w) for w in words_sans_stop  ]
+#print(words_sans_stop_tag)
+
+
+def word_filtered (text):   # enlever les stop words de la liste pour garder les mots "intéressant"  , ex : on supprime les determeinant 
+    stopWords = set(stopwords.words('english'))
+    words = nltk.word_tokenize(text)
+    wordsFiltered = []
+    for w in words:
+        if w not in stopWords:
+            wordsFiltered.append(w)
+    return wordsFiltered
+
+def tag(text_en_list):
+    return nltk.pos_tag(text_en_list)
+
+def lemmatizer_list(tagged_list_words):  # on lemmatize les mots dans cette fonction 
+    words=[]
+    for word, tag in tagged_list_words:
+        if penn_to_wn(tag) == '':
+            words.append(word)
+        else : 
+            words.append(wordnet_lemmatizer.lemmatize(word,penn_to_wn(tag)))
+    return words
+
+def U_list(liste ):    # joindre les liste 
+    liste_jointe = []
+    for l in liste :
+        liste_jointe = liste_jointe + l
+    return liste_jointe
+
+def U_String(liste): # joindre les string 
+    liste_jointe=""
+    
+    for l in liste :
+        liste_jointe = liste_jointe + l
+    return liste_jointe
+
+def cat(liste, n):        # ressort les categories les plus présentes 
+    count = Counter(tag for w, tag in liste)
+    return count.most_common(n)
+                
+
+
+mot_sans_sw = word_filtered(U_String(clean_text_list))  # recuperer string de tous les fichiers et enlever stop wors english
+mot_sans_sw_tag = tag(mot_sans_sw) # POS taguer tous les mots 
+list_lemm = lemmatizer_list((mot_sans_sw_tag))# lemmatiser tous les mots 
+list_lemm_tag = tag(list_lemm)
+mille_lem = get_most_common_tokens(list_lemm, 1000) # afficher les mots les plus fréquent jusqu'au 1000 eme
+mille_lem_tag = get_most_common_tokens(list_lemm_tag, 1000) # afficher les mots les plus fréquent jusqu'au 1000 eme
+categories =cat( list_lemm_tag, 15) # les categories les plus fréquentes , on a enlevé precedement stop words donc éfficace
+
+print(mille_lem[0:20])      
+print(mille_lem_tag[0:20])
+print(categories)
+            
+        
+
+from collections import Counter   #graphe occurences termes 
+import numpy as np
+import matplotlib.pyplot as plt
+
+ciquante_lem = get_most_common_tokens(list_lemm, 1000)
+labels, values = zip(*ciquante_lem)
+
+indexes = np.arange(len(labels))
+width = 1
+
+plt.bar(indexes, np.log(values), width)
+plt.xticks(indexes + width * 0.5, labels)
+plt.show()
+
+
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.stem.porter import PorterStemmer
+
+def tokenize_(text):
+    tokens = nltk.word_tokenize(text)
+    stems = []
+    for item in tokens:
+        stems.append(PorterStemmer().stem(item))
+    return stems
+
+
+tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words='english')   #vectoriser 
+tfs = tfidf.fit_transform(tokenize(text0))
+
+
+
+
+top =get_most_common_tokens(tokenize(text0), 30)
+counts = Counter (w for w in tokenize(text0))
+print(top)
+string = ""
+for s, number in top :
+    string = string +" "+ s 
+    
+
+response = tfidf.transform([string])
+print (response)
+
+def list_to_dict(liste):
+    attrs = {}
+    for l in liste:
+        attrs[l[0]] = l[1]
+    return attrs 
+
+
+
+feature_names = tfidf.get_feature_names()   # plus fréquence élevé moins poid tfid élevé  => coeff rareté
+for col in response.nonzero()[1]:
+    print (feature_names[col], ' - ', response[0, col], " fréquence ", counts[feature_names[col]])
+
+
+U_String(text_list[0:61])  # texte du premier doc 
+
+
+
+question_list=[]      #calcul poids tfid  pour chaque questions par rapport aux textes en question  et calcul similarité question /texte
+question_tfidf("C:/Users/MyPC/Documents/AIC-partage/TC3/data/questions")
+tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words='english')
+tfs = tfidf.fit_transform(tokenize(U_String(text_list[0:61])))  # prendre le premier doc 
+compt = 1
+for q in question_list[0: 10] :
+    print("question:  ", q)
+    response = tfidf.transform([q])
+    feature_names = tfidf.get_feature_names()   # plus fréquence élevé moins poid tfid élevé
+    for col in response.nonzero()[1]:
+        print (feature_names[col], ' - ', response[0, col])
+    print("\n")
+    print("Similarité : ", get_similarity(U_String(text_list[0:61]), q, tfidf))
+    print("\n")
+    compt =compt +1 
+
+
+
+
+# appliquer du stemming sur les requetes et doc fait baisser  les similarités 
+# mais si on rajoute les stemm aux string initial alors on pourrait avoir un gain de similarité 
+
+
+from nltk.stem import PorterStemmer
+from nltk.tokenize import sent_tokenize, word_tokenize
+ 
+ps = PorterStemmer()
+
+question_list=[]
+
+def stemmer(liste_word ):
+    stem_list=[]
+    for w in liste_word:
+        stem_list.append(ps.stem(w))
+    return stem_list 
+
+def list_to_string(liste):
+    ss= ""
+    for s in liste :
+        ss= ss +s+" "
+    return ss 
+    
+        
+
+question_tfidf("C:/Users/MyPC/Documents/AIC-partage/TC3/data/questions")
+tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words='english')
+tfs = tfidf.fit_transform(stemmer(tokenize(U_String(text_list[0:61]))) ) # prendre le premier doc 
+compt = 1
+for q in question_list[0: 10] :
+    print("question:  ", q)
+    response = tfidf.transform([list_to_string(stemmer(tokenize(q)))])
+    feature_names = tfidf.get_feature_names()   # plus fréquence élevé moins poid tfid élevé
+    for col in response.nonzero()[1]:
+        print (feature_names[col], ' - ', response[0, col])
+    print("\n")
+    print("Similarité : ", get_similarity(U_String(text_list[0:61]), q, tfidf))
+    print("\n")
+    compt =compt +1 
+    
+
+
+
+
+
+
+
+
+# appliquer synonymes pour expension requetes avec wordnet augmente similarité quelques requetes questions docs 
+from nltk.corpus import wordnet 
+wordnet.synsets("classical")[0].lemmas()[0].name()
+
+
+
+def synonyme_quest (string ):   #ajouter synonymes à requetes pour plus de précision (avec WORDNET ) 
+    synonyms = []
+    antonyms = []
+    liste = tokenize(string )
+    for w in liste:
+        for syn in wordnet.synsets(w):
+            for l in syn.lemmas():
+                synonyms.append(l.name())
+    s = list_to_string(synonyms)
+    return s
+
+question_list=[]
+question_tfidf("C:/Users/MyPC/Documents/AIC-partage/TC3/data/questions")
+tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words='english')
+tfs = tfidf.fit_transform(tokenize(U_String(text_list[0:61])))  # prendre le premier doc 
+compt = 1
+for q in question_list[0: 10] :
+    print("question:  ", q)
+    response = tfidf.transform([synonyme_quest(q)])
+    feature_names = tfidf.get_feature_names()   # plus fréquence élevé moins poid tfid élevé
+    for col in response.nonzero()[1]:
+        print (feature_names[col], ' - ', response[0, col])
+    print("\n")
+    print("Similarité : ", get_similarity(U_String(text_list[0:61]), synonyme_quest(q), tfidf))
+    print("\n")
+    compt =compt +1 
+    
+
+
+
+pas  réussi à lancer le script .. .
